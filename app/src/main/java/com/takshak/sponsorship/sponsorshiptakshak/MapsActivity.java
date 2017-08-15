@@ -14,6 +14,7 @@ import android.support.annotation.StringDef;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
+import android.support.v4.app.ShareCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.widget.ListPopupWindowCompat;
 import android.support.v7.app.AlertDialog;
@@ -21,6 +22,7 @@ import android.view.View;
 import android.widget.EditText;
 import android.widget.Toast;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationListener;
@@ -37,7 +39,7 @@ import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
 
-
+import com.google.gson.reflect.TypeToken;
 import com.loopj.android.http.*;
 import org.json.JSONObject;
 import cz.msebera.android.httpclient.*;
@@ -45,12 +47,21 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 import java.io.IOException;
+import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
+import java.util.ListIterator;
+import java.util.Map;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback,
         GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener,
-        LocationListener {
+        LocationListener,
+        GoogleMap.OnMarkerDragListener {
 
     private GoogleMap mMap;
     private GoogleApiClient client;
@@ -61,6 +72,73 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private LatLng searchResult;
     private static final String connectionDomain = "http://takshak.herokuapp.com";
     private static AsyncHttpClient httpClient = new AsyncHttpClient();
+    private static boolean flag;
+
+    private class responseStructure{
+        private static class latlng{
+            private int Latitude;
+            private int Longitude;
+            public latlng(String latlng){
+                boolean flag;
+                char latlng
+            }
+            public void setLatitude(String latitude){
+                Latitude = Integer.parseInt(latitude);
+            }
+            public void setLongitude(String longitude){
+                Longitude = Integer.parseInt(longitude);
+            }
+            public int getLatitude(){
+                return Latitude;
+            }
+            public int getLongitude(){
+                return Longitude;
+            }
+        }
+        private String _id;
+        private String companyName;
+        private latlng latlng;
+        private int _v;
+        public responseStructure(String JsonData){
+            char[] JsonStringArray = JsonData.toCharArray();
+            for(char x: JsonStringArray){
+                switch (x){
+                    case '\\': break;
+                    case ' ': break;
+                    case ',': break;
+
+                }
+            }
+        }
+    }
+
+    private ArrayList<responseStructure> arrayExtractor(String JsonString){
+        ArrayList<responseStructure> Objectset = null;
+        char[] JsonStringArray = JsonString.toCharArray();
+        boolean flag = true;
+        String ObjectString = new String();
+        for(char x : JsonStringArray){
+            if(flag==false){
+                if(ObjectString!= new String()){
+                    Objectset.add(new responseStructure(ObjectString));
+                }
+            }
+            switch (x){
+                case '{': break;
+                case '}': flag = false;
+                        break;
+                case ',': if(flag==false){
+                            break;
+                        }
+                case ' ': if(flag==false){
+                            break;
+                        }
+                default: ObjectString = ObjectString+x;
+                            break;
+            }
+        }
+        return  Objectset;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -115,6 +193,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED){
             buildGoogleApiClient();
             mMap.setMyLocationEnabled(true);
+            mMap.setOnMarkerDragListener(this);
         }
     }
 
@@ -142,9 +221,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     LatLng latlng = new LatLng(myAddress.getLatitude(), myAddress.getLongitude());
                     markerOptions.position(latlng);
                     markerOptions.title("Entered Location");
+                    markerOptions.draggable(true);
+                    mMap.clear();
                     mMap.addMarker(markerOptions);
                     mMap.animateCamera(CameraUpdateFactory.newLatLng(latlng));
-                    searchResult = latlng;
+                    this.searchResult = latlng;
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -158,37 +239,68 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             EditText tf_companyName = (EditText)findViewById(R.id.companyName);
             String companyName = tf_companyName.getText().toString();
 
-            if((!companyName.equals(""))&&(searchResult!=null)){
-                Gson gson = new Gson();
+            if((!companyName.equals(""))&&(this.searchResult!=null)){
+                final Gson gson = new Gson();
                 String latlng = gson.toJson(searchResult);
                 RequestParams params = new RequestParams();
                 params.put("companyName", companyName);
                 params.put("latlng", latlng);
-                httpClient.post(connectionDomain, params, new AsyncHttpResponseHandler() {
+                if(proccedsubmission(companyName, searchResult)){
+                    httpClient.post(connectionDomain, params, new AsyncHttpResponseHandler() {
 
-                    @Override
-                    public void onStart() {
-                        // called before request is started
-                        Toast.makeText(getApplicationContext(), "Request Sent", Toast.LENGTH_LONG).show();
-                    }
+                        @Override
+                        public void onStart() {
+                            // called before request is started
+                            Toast.makeText(getApplicationContext(), "Request Sent", Toast.LENGTH_LONG).show();
+                        }
 
-                    @Override
-                    public void onSuccess(int statusCode, Header[] headers, byte[] response) {
-                        Toast.makeText(getApplicationContext(), "Data Sent", Toast.LENGTH_LONG).show();
-                    }
+                        @Override
+                        public void onSuccess(int statusCode, Header[] headers, byte[] response) {
+                            AlertDialog.Builder alertbox = new AlertDialog.Builder(MapsActivity.this);
+                            alertbox.setTitle("Warning");
+                            alertbox.setMessage(new String(response));
+                            alertbox.setCancelable(false);
+                            alertbox.setPositiveButton("Ok", new DialogInterface.OnClickListener(){
 
-                    @Override
-                    public void onFailure(int statusCode, Header[] headers, byte[] errorResponse, Throwable e) {
-                        // called when response HTTP status is "4XX" (eg. 401, 403, 404)
-                        Toast.makeText(getApplicationContext(), "Server Down", Toast.LENGTH_LONG).show();
-                    }
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
 
-                    @Override
-                    public void onRetry(int retryNo) {
-                        // called when request is retried
-                        Toast.makeText(getApplicationContext(), "Retrying", Toast.LENGTH_LONG).show();
-                    }
-                });
+                                }
+                            });
+                            AlertDialog alert = alertbox.create();
+                            alert.show();
+                        }
+
+                        @Override
+                        public void onFailure(int statusCode, Header[] headers, byte[] errorResponse, Throwable e) {
+                            // called when response HTTP status is "4XX" (eg. 401, 403, 404)
+                            if(statusCode==400){
+                                AlertDialog.Builder alertbox = new AlertDialog.Builder(MapsActivity.this);
+                                alertbox.setTitle("Warning");
+                                alertbox.setMessage("This company has already been visited by someone previously");
+                                alertbox.setCancelable(false);
+                                alertbox.setPositiveButton("Ok", new DialogInterface.OnClickListener(){
+
+                                    @Override
+                                    public void onClick(DialogInterface dialog, int which) {
+
+                                    }
+                                });
+                                AlertDialog alert = alertbox.create();
+                                alert.show();
+                            }
+                            else{
+                                Toast.makeText(getApplicationContext(), "Server Down", Toast.LENGTH_LONG).show();
+                            }
+                        }
+
+                        @Override
+                        public void onRetry(int retryNo) {
+                            // called when request is retried
+                            Toast.makeText(getApplicationContext(), "Retrying", Toast.LENGTH_LONG).show();
+                        }
+                    });
+                }
             }
             else{
                 AlertDialog.Builder alertbox = new AlertDialog.Builder(MapsActivity.this);
@@ -208,6 +320,155 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
+    public void setboolean(boolean bool){
+        this.flag = bool;
+    }
+
+    private boolean proccedsubmission(String companyName, LatLng searchResult) {
+        RequestParams params = new RequestParams();
+        boolean flag;
+        final Gson gson = new Gson();
+
+        httpClient.get("http://takshak.herokuapp.com/addChecker/"+companyName, params, new AsyncHttpResponseHandler() {
+
+            @Override
+            public void onStart() {
+                // called before request is started
+                Toast.makeText(getApplicationContext(), "Request Sent", Toast.LENGTH_LONG).show();
+            }
+
+            @Override
+            public void onSuccess(int statusCode, Header[] headers, byte[] response) {
+                ObjectMapper mapper = new ObjectMapper();
+//                try{
+//                    Map<String,Object> map = mapper.readValue(new String(response), Map.class);
+                List<responseStructure> listCar = null;
+                try {
+                    String resp = new String(response);
+//                    AlertDialog.Builder alertbox = new AlertDialog.Builder(MapsActivity.this);
+//                    alertbox.setTitle("responseString");
+//                    alertbox.setMessage(resp);
+//                    alertbox.setCancelable(false);
+//                    alertbox.setPositiveButton("Ok", new DialogInterface.OnClickListener(){
+//
+//                        @Override
+//                        public void onClick(DialogInterface dialog, int which) {
+//
+//                        }
+//                    });
+//                    AlertDialog alert = alertbox.create();
+//                    alert.show();
+                    listCar = mapper.readValue(resp, new TypeReference<ArrayList<responseStructure>>(){});
+                    Iterator<responseStructure> listIterator = listCar.iterator();
+//                    while(listIterator.hasNext()){
+                        AlertDialog.Builder alertbox2 = new AlertDialog.Builder(MapsActivity.this);
+                        alertbox2.setTitle("response");
+                        alertbox2.setMessage("guck");
+                        alertbox2.setCancelable(false);
+                        alertbox2.setPositiveButton("Ok", new DialogInterface.OnClickListener(){
+
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+
+                            }
+                        });
+                        AlertDialog alert2 = alertbox2.create();
+                        alert2.show();
+//                    }
+                } catch (IOException e) {
+                    AlertDialog.Builder alertbox2 = new AlertDialog.Builder(MapsActivity.this);
+                    alertbox2.setTitle("response");
+                    alertbox2.setMessage(e.toString());
+                    alertbox2.setCancelable(false);
+                    alertbox2.setPositiveButton("Ok", new DialogInterface.OnClickListener(){
+
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+
+                        }
+                    });
+                    AlertDialog alert2 = alertbox2.create();
+                    alert2.show();
+                }
+
+//                    for(responseStructure x : responseObject){
+    //                    AlertDialog.Builder alertbox = new AlertDialog.Builder(MapsActivity.this);
+    //                    alertbox.setTitle("response");
+    //                    alertbox.setMessage(x.toString());
+    //                    alertbox.setCancelable(false);
+    //                    alertbox.setPositiveButton("Ok", new DialogInterface.OnClickListener(){
+    //
+    //                        @Override
+    //                        public void onClick(DialogInterface dialog, int which) {
+    //
+    //                        }
+    //                    });
+    //                    AlertDialog alert = alertbox.create();
+    //                    alert.show();
+//                    }
+                    setboolean(false);
+//                }
+//                catch (IOException e){
+//                    Toast.makeText(getApplicationContext(), "Retrying", Toast.LENGTH_LONG).show();
+//                }
+            }
+
+            @Override
+            public void onFailure(int statusCode, Header[] headers, byte[] errorResponse, Throwable e) {
+                // called when response HTTP status is "4XX" (eg. 401, 403, 404)
+                if(statusCode==400){
+                    AlertDialog.Builder alertbox = new AlertDialog.Builder(MapsActivity.this);
+                    alertbox.setTitle("Warning");
+                    alertbox.setMessage("fail");
+                    alertbox.setCancelable(false);
+                    alertbox.setPositiveButton("Ok", new DialogInterface.OnClickListener(){
+
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+
+                        }
+                    });
+                    AlertDialog alert = alertbox.create();
+                    alert.show();
+                }
+                else{
+                    Toast.makeText(getApplicationContext(), "Server Down", Toast.LENGTH_LONG).show();
+                }
+                setboolean(false);
+            }
+
+            @Override
+            public void onRetry(int retryNo) {
+                // called when request is retried
+                Toast.makeText(getApplicationContext(), "Retrying", Toast.LENGTH_LONG).show();
+            }
+        });
+        return this.flag;
+    }
+
+    public void currentLocationFunction(View v){
+        if(v.getId() == R.id.currentLocationButton){
+            if (checkLocationPermission()) {
+                lastLocation = LocationServices.FusedLocationApi
+                        .getLastLocation(client);
+            }
+
+            // Set the map's camera position to the current location of the device.
+            if (lastLocation != null) {
+                LatLng latLng = new LatLng(lastLocation.getLatitude(), lastLocation.getLongitude());
+                MarkerOptions markerOptions = new MarkerOptions();
+                markerOptions.position(latLng);
+                markerOptions.title("You are here");
+                markerOptions.draggable(true);
+                mMap.clear();
+                mMap.addMarker(markerOptions);
+                mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
+                mMap.animateCamera(CameraUpdateFactory.zoomBy(10));
+                searchResult = latLng;
+            }
+        }
+    }
+
     @Override
     public void onLocationChanged(Location location) {
         lastLocation = location;
@@ -220,13 +481,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         MarkerOptions markerOptions = new MarkerOptions();
         markerOptions.position(latlng);
         markerOptions.title("You are here");
-        markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE));
-
+        markerOptions.draggable(true);
+        mMap.clear();
         currentLocationMarker = mMap.addMarker(markerOptions);
 
         mMap.moveCamera(CameraUpdateFactory.newLatLng(latlng));
         mMap.animateCamera(CameraUpdateFactory.zoomBy(10));
-
+        this.searchResult = latlng;
         if(client != null){
             LocationServices.FusedLocationApi.removeLocationUpdates(client, this);
         }
@@ -267,5 +528,20 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onConnectionSuspended(int i) {
 
+    }
+
+    @Override
+    public void onMarkerDragStart(Marker marker) {
+
+    }
+
+    @Override
+    public void onMarkerDrag(Marker marker) {
+
+    }
+
+    @Override
+    public void onMarkerDragEnd(Marker marker) {
+        this.searchResult = marker.getPosition();
     }
 }

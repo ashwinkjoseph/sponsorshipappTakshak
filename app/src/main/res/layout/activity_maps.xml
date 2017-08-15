@@ -54,4 +54,12 @@
         android:layout_alignParentTop="true"
         android:text="Company Name" />
 
+    <Button
+        android:id="@+id/currentLocationButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignTop="@+id/map"
+        android:onClick="currentLocationFunction"
+        android:text="Choose your Current Location?" />
+
 </RelativeLayout>
