@@ -23,6 +23,11 @@ import android.widget.EditText;
 import android.widget.Toast;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.deser.impl.FieldProperty;
+import com.fasterxml.jackson.databind.node.JsonNodeType;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationListener;
@@ -39,6 +44,7 @@ import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
 
+import com.google.gson.JsonArray;
 import com.google.gson.reflect.TypeToken;
 import com.loopj.android.http.*;
 import org.json.JSONObject;
@@ -47,6 +53,8 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 import java.io.IOException;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Field;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -73,72 +81,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private static final String connectionDomain = "http://takshak.herokuapp.com";
     private static AsyncHttpClient httpClient = new AsyncHttpClient();
     private static boolean flag;
-
-    private class responseStructure{
-        private static class latlng{
-            private int Latitude;
-            private int Longitude;
-            public latlng(String latlng){
-                boolean flag;
-                char latlng
-            }
-            public void setLatitude(String latitude){
-                Latitude = Integer.parseInt(latitude);
-            }
-            public void setLongitude(String longitude){
-                Longitude = Integer.parseInt(longitude);
-            }
-            public int getLatitude(){
-                return Latitude;
-            }
-            public int getLongitude(){
-                return Longitude;
-            }
-        }
-        private String _id;
-        private String companyName;
-        private latlng latlng;
-        private int _v;
-        public responseStructure(String JsonData){
-            char[] JsonStringArray = JsonData.toCharArray();
-            for(char x: JsonStringArray){
-                switch (x){
-                    case '\\': break;
-                    case ' ': break;
-                    case ',': break;
-
-                }
-            }
-        }
-    }
-
-    private ArrayList<responseStructure> arrayExtractor(String JsonString){
-        ArrayList<responseStructure> Objectset = null;
-        char[] JsonStringArray = JsonString.toCharArray();
-        boolean flag = true;
-        String ObjectString = new String();
-        for(char x : JsonStringArray){
-            if(flag==false){
-                if(ObjectString!= new String()){
-                    Objectset.add(new responseStructure(ObjectString));
-                }
-            }
-            switch (x){
-                case '{': break;
-                case '}': flag = false;
-                        break;
-                case ',': if(flag==false){
-                            break;
-                        }
-                case ' ': if(flag==false){
-                            break;
-                        }
-                default: ObjectString = ObjectString+x;
-                            break;
-            }
-        }
-        return  Objectset;
-    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -194,6 +136,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             buildGoogleApiClient();
             mMap.setMyLocationEnabled(true);
             mMap.setOnMarkerDragListener(this);
+            //TODO MAKE CAMERA MOVE TO CURRENT POSITION ONLOAD
+//            mMap.animateCamera(CameraUpdateFactory.newLatLng(latlng));
         }
     }
 
@@ -212,7 +156,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             String location = tf_location.getText().toString();
             List<Address> addressList;
             MarkerOptions markerOptions = new MarkerOptions();
-
+//TODO ADD ACTIVITY TO SELECT FROM RETURNED LIST OF ADDRESSES
             if(!location.equals("")){
                 Geocoder geocoder = new Geocoder(this);
                 try {
@@ -233,12 +177,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         }
     }
-
+//TODO ADD ACTIVITY TO SHOW ALL LOCATIONS VISITED
     public void submitFunction(View v){
         if(v.getId() == R.id.submitButton){
             EditText tf_companyName = (EditText)findViewById(R.id.companyName);
             String companyName = tf_companyName.getText().toString();
-
+//TODO MAKE THIS CALL NON-ASYNCHRONOUS
             if((!companyName.equals(""))&&(this.searchResult!=null)){
                 final Gson gson = new Gson();
                 String latlng = gson.toJson(searchResult);
@@ -246,19 +190,19 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 params.put("companyName", companyName);
                 params.put("latlng", latlng);
                 if(proccedsubmission(companyName, searchResult)){
+//                    Toast.makeText(getApplicationContext(), "vvyiyi", Toast.LENGTH_LONG).show();
                     httpClient.post(connectionDomain, params, new AsyncHttpResponseHandler() {
 
                         @Override
                         public void onStart() {
                             // called before request is started
-                            Toast.makeText(getApplicationContext(), "Request Sent", Toast.LENGTH_LONG).show();
+                            Toast.makeText(getApplicationContext(), "Request Sent1", Toast.LENGTH_LONG).show();
                         }
-
                         @Override
                         public void onSuccess(int statusCode, Header[] headers, byte[] response) {
                             AlertDialog.Builder alertbox = new AlertDialog.Builder(MapsActivity.this);
-                            alertbox.setTitle("Warning");
-                            alertbox.setMessage(new String(response));
+                            alertbox.setTitle("Success");
+                            alertbox.setMessage("You are free to go");
                             alertbox.setCancelable(false);
                             alertbox.setPositiveButton("Ok", new DialogInterface.OnClickListener(){
 
@@ -301,6 +245,21 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         }
                     });
                 }
+                else{
+                    AlertDialog.Builder alertbox = new AlertDialog.Builder(MapsActivity.this);
+                    alertbox.setTitle("Warning2");
+                    alertbox.setMessage("This company has already been visited by someone previously");
+                    alertbox.setCancelable(false);
+                    alertbox.setPositiveButton("Ok", new DialogInterface.OnClickListener(){
+
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+
+                        }
+                    });
+                    AlertDialog alert = alertbox.create();
+                    alert.show();
+                }
             }
             else{
                 AlertDialog.Builder alertbox = new AlertDialog.Builder(MapsActivity.this);
@@ -334,50 +293,31 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             @Override
             public void onStart() {
                 // called before request is started
-                Toast.makeText(getApplicationContext(), "Request Sent", Toast.LENGTH_LONG).show();
+                Toast.makeText(getApplicationContext(), "Request Sent2", Toast.LENGTH_LONG).show();
             }
 
             @Override
             public void onSuccess(int statusCode, Header[] headers, byte[] response) {
                 ObjectMapper mapper = new ObjectMapper();
-//                try{
-//                    Map<String,Object> map = mapper.readValue(new String(response), Map.class);
-                List<responseStructure> listCar = null;
+                ArrayList<Parser> objects = null;
+                //TODO CHECK IF ANY RETURNED OBJECT IS IN THE VINCITY OF CURRENT LOCATION
                 try {
                     String resp = new String(response);
-//                    AlertDialog.Builder alertbox = new AlertDialog.Builder(MapsActivity.this);
-//                    alertbox.setTitle("responseString");
-//                    alertbox.setMessage(resp);
-//                    alertbox.setCancelable(false);
-//                    alertbox.setPositiveButton("Ok", new DialogInterface.OnClickListener(){
-//
-//                        @Override
-//                        public void onClick(DialogInterface dialog, int which) {
-//
-//                        }
-//                    });
-//                    AlertDialog alert = alertbox.create();
-//                    alert.show();
-                    listCar = mapper.readValue(resp, new TypeReference<ArrayList<responseStructure>>(){});
-                    Iterator<responseStructure> listIterator = listCar.iterator();
-//                    while(listIterator.hasNext()){
-                        AlertDialog.Builder alertbox2 = new AlertDialog.Builder(MapsActivity.this);
-                        alertbox2.setTitle("response");
-                        alertbox2.setMessage("guck");
-                        alertbox2.setCancelable(false);
-                        alertbox2.setPositiveButton("Ok", new DialogInterface.OnClickListener(){
-
-                            @Override
-                            public void onClick(DialogInterface dialog, int which) {
-
-                            }
-                        });
-                        AlertDialog alert2 = alertbox2.create();
-                        alert2.show();
-//                    }
+                    JavaType type = mapper.getTypeFactory().constructCollectionType(ArrayList.class, Parser.class);
+                    objects = mapper.readValue(resp, type);
+                    Iterator<Parser> objectsIterator = objects.iterator();
+                    boolean flag = true;
+                    while(objectsIterator.hasNext()){
+                        Parser newobj = objectsIterator.next();
+//                        LatLng latlng = new LatLng(newobj.getlatlng().getlatitude(), )
+                        flag = false;
+                        break;
+                    }
+                    setboolean(flag);
+                    Toast.makeText(getApplicationContext(), "here", Toast.LENGTH_LONG).show();
                 } catch (IOException e) {
                     AlertDialog.Builder alertbox2 = new AlertDialog.Builder(MapsActivity.this);
-                    alertbox2.setTitle("response");
+                    alertbox2.setTitle("error");
                     alertbox2.setMessage(e.toString());
                     alertbox2.setCancelable(false);
                     alertbox2.setPositiveButton("Ok", new DialogInterface.OnClickListener(){
@@ -389,28 +329,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     });
                     AlertDialog alert2 = alertbox2.create();
                     alert2.show();
-                }
-
-//                    for(responseStructure x : responseObject){
-    //                    AlertDialog.Builder alertbox = new AlertDialog.Builder(MapsActivity.this);
-    //                    alertbox.setTitle("response");
-    //                    alertbox.setMessage(x.toString());
-    //                    alertbox.setCancelable(false);
-    //                    alertbox.setPositiveButton("Ok", new DialogInterface.OnClickListener(){
-    //
-    //                        @Override
-    //                        public void onClick(DialogInterface dialog, int which) {
-    //
-    //                        }
-    //                    });
-    //                    AlertDialog alert = alertbox.create();
-    //                    alert.show();
-//                    }
                     setboolean(false);
-//                }
-//                catch (IOException e){
-//                    Toast.makeText(getApplicationContext(), "Retrying", Toast.LENGTH_LONG).show();
-//                }
+                }
             }
 
             @Override
@@ -432,7 +352,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     alert.show();
                 }
                 else{
-                    Toast.makeText(getApplicationContext(), "Server Down", Toast.LENGTH_LONG).show();
+                    Toast.makeText(getApplicationContext(), "Server Downgyguy", Toast.LENGTH_LONG).show();
                 }
                 setboolean(false);
             }
@@ -443,6 +363,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 Toast.makeText(getApplicationContext(), "Retrying", Toast.LENGTH_LONG).show();
             }
         });
+        Toast.makeText(getApplicationContext(), "exiting2", Toast.LENGTH_LONG).show();
         return this.flag;
     }
 
