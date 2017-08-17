@@ -181,28 +181,139 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public void submitFunction(View v){
         if(v.getId() == R.id.submitButton){
             EditText tf_companyName = (EditText)findViewById(R.id.companyName);
-            String companyName = tf_companyName.getText().toString();
+            final String companyName = tf_companyName.getText().toString();
 //TODO MAKE THIS CALL NON-ASYNCHRONOUS
             if((!companyName.equals(""))&&(this.searchResult!=null)){
                 final Gson gson = new Gson();
-                String latlng = gson.toJson(searchResult);
                 RequestParams params = new RequestParams();
-                params.put("companyName", companyName);
-                params.put("latlng", latlng);
-                if(proccedsubmission(companyName, searchResult)){
-//                    Toast.makeText(getApplicationContext(), "vvyiyi", Toast.LENGTH_LONG).show();
-                    httpClient.post(connectionDomain, params, new AsyncHttpResponseHandler() {
+                boolean flag;
+                httpClient.get("http://takshak.herokuapp.com/addChecker/"+companyName, params, new AsyncHttpResponseHandler() {
 
-                        @Override
-                        public void onStart() {
-                            // called before request is started
-                            Toast.makeText(getApplicationContext(), "Request Sent1", Toast.LENGTH_LONG).show();
+                    @Override
+                    public void onStart() {
+                        // called before request is started
+                        Toast.makeText(getApplicationContext(), "Request Sent2", Toast.LENGTH_LONG).show();
+                    }
+
+                    @Override
+                    public void onSuccess(int statusCode, Header[] headers, byte[] response) {
+                        ObjectMapper mapper = new ObjectMapper();
+                        ArrayList<Parser> objects = null;
+                        //TODO CHECK IF ANY RETURNED OBJECT IS IN THE VINCITY OF CURRENT LOCATION
+                        try {
+                            String resp = new String(response);
+                            JavaType type = mapper.getTypeFactory().constructCollectionType(ArrayList.class, Parser.class);
+                            objects = mapper.readValue(resp, type);
+                            Iterator<Parser> objectsIterator = objects.iterator();
+                            boolean flag = true;
+                            while(objectsIterator.hasNext()){
+                                Parser newobj = objectsIterator.next();
+//                        LatLng latlng = new LatLng(newobj.getlatlng().getlatitude(), )
+                                //TODO CHECK FOR ANY ENTRY WITH SAME NAME WITHIN A RADIUS
+                                flag = false;
+                                break;
+                            }
+                            //TODO IF NONE FOUND, IT IS SAFE TO SEND THE POST REQUEST
+                            String latlng = gson.toJson(searchResult);
+                            RequestParams params = new RequestParams();
+                            params.put("companyName", companyName);
+                            params.put("latlng", latlng);
+                            httpClient.post(connectionDomain, params, new AsyncHttpResponseHandler() {
+
+                                @Override
+                                public void onStart() {
+                                    // called before request is started
+                                    Toast.makeText(getApplicationContext(), "Request Sent1", Toast.LENGTH_LONG).show();
+                                }
+                                @Override
+                                public void onSuccess(int statusCode, Header[] headers, byte[] response) {
+                                    AlertDialog.Builder alertbox = new AlertDialog.Builder(MapsActivity.this);
+                                    alertbox.setTitle("Success");
+                                    alertbox.setMessage("You are free to go");
+                                    alertbox.setCancelable(false);
+                                    alertbox.setPositiveButton("Ok", new DialogInterface.OnClickListener(){
+
+                                        @Override
+                                        public void onClick(DialogInterface dialog, int which) {
+
+                                        }
+                                    });
+                                    AlertDialog alert = alertbox.create();
+                                    alert.show();
+                                }
+
+                                @Override
+                                public void onFailure(int statusCode, Header[] headers, byte[] errorResponse, Throwable e) {
+                                    // called when response HTTP status is "4XX" (eg. 401, 403, 404)
+                                    if(statusCode==400){
+                                        AlertDialog.Builder alertbox = new AlertDialog.Builder(MapsActivity.this);
+                                        alertbox.setTitle("Warning");
+                                        alertbox.setMessage("This company has already been visited by someone previously");
+                                        alertbox.setCancelable(false);
+                                        alertbox.setPositiveButton("Ok", new DialogInterface.OnClickListener(){
+
+                                            @Override
+                                            public void onClick(DialogInterface dialog, int which) {
+
+                                            }
+                                        });
+                                        AlertDialog alert = alertbox.create();
+                                        alert.show();
+                                    }
+                                    else{
+                                        Toast.makeText(getApplicationContext(), "Server Down", Toast.LENGTH_LONG).show();
+                                    }
+                                }
+
+                                @Override
+                                public void onRetry(int retryNo) {
+                                    // called when request is retried
+                                    Toast.makeText(getApplicationContext(), "Retrying", Toast.LENGTH_LONG).show();
+                                }
+                            });
+                        } catch (IOException e) {
+                            AlertDialog.Builder alertbox2 = new AlertDialog.Builder(MapsActivity.this);
+                            alertbox2.setTitle("error");
+                            alertbox2.setMessage(e.toString());
+                            alertbox2.setCancelable(false);
+                            alertbox2.setPositiveButton("Ok", new DialogInterface.OnClickListener(){
+
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+
+                                }
+                            });
+                            AlertDialog alert2 = alertbox2.create();
+                            alert2.show();
+                            setboolean(false);
                         }
-                        @Override
-                        public void onSuccess(int statusCode, Header[] headers, byte[] response) {
+                    }
+
+                    @Override
+                    public void onFailure(int statusCode, Header[] headers, byte[] errorResponse, Throwable e) {
+                        // called when response HTTP status is "4XX" (eg. 401, 403, 404)
+//                        if(statusCode==400){
+//                            AlertDialog.Builder alertbox = new AlertDialog.Builder(MapsActivity.this);
+//                            alertbox.setTitle("Warning");
+//                            alertbox.setMessage("fail");
+//                            alertbox.setCancelable(false);
+//                            alertbox.setPositiveButton("Ok", new DialogInterface.OnClickListener(){
+//
+//                                @Override
+//                                public void onClick(DialogInterface dialog, int which) {
+//
+//                                }
+//                            });
+//                            AlertDialog alert = alertbox.create();
+//                            alert.show();
+//                        }
+//                        else{
+//                            Toast.makeText(getApplicationContext(), "Server Downgyguy", Toast.LENGTH_LONG).show();
+//                        }
+//                        setboolean(false);
                             AlertDialog.Builder alertbox = new AlertDialog.Builder(MapsActivity.this);
-                            alertbox.setTitle("Success");
-                            alertbox.setMessage("You are free to go");
+                            alertbox.setTitle("Warning2");
+                            alertbox.setMessage("This company has already been visited by someone previously");
                             alertbox.setCancelable(false);
                             alertbox.setPositiveButton("Ok", new DialogInterface.OnClickListener(){
 
@@ -213,53 +324,89 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                             });
                             AlertDialog alert = alertbox.create();
                             alert.show();
-                        }
+                    }
 
-                        @Override
-                        public void onFailure(int statusCode, Header[] headers, byte[] errorResponse, Throwable e) {
-                            // called when response HTTP status is "4XX" (eg. 401, 403, 404)
-                            if(statusCode==400){
-                                AlertDialog.Builder alertbox = new AlertDialog.Builder(MapsActivity.this);
-                                alertbox.setTitle("Warning");
-                                alertbox.setMessage("This company has already been visited by someone previously");
-                                alertbox.setCancelable(false);
-                                alertbox.setPositiveButton("Ok", new DialogInterface.OnClickListener(){
-
-                                    @Override
-                                    public void onClick(DialogInterface dialog, int which) {
-
-                                    }
-                                });
-                                AlertDialog alert = alertbox.create();
-                                alert.show();
-                            }
-                            else{
-                                Toast.makeText(getApplicationContext(), "Server Down", Toast.LENGTH_LONG).show();
-                            }
-                        }
-
-                        @Override
-                        public void onRetry(int retryNo) {
-                            // called when request is retried
-                            Toast.makeText(getApplicationContext(), "Retrying", Toast.LENGTH_LONG).show();
-                        }
-                    });
-                }
-                else{
-                    AlertDialog.Builder alertbox = new AlertDialog.Builder(MapsActivity.this);
-                    alertbox.setTitle("Warning2");
-                    alertbox.setMessage("This company has already been visited by someone previously");
-                    alertbox.setCancelable(false);
-                    alertbox.setPositiveButton("Ok", new DialogInterface.OnClickListener(){
-
-                        @Override
-                        public void onClick(DialogInterface dialog, int which) {
-
-                        }
-                    });
-                    AlertDialog alert = alertbox.create();
-                    alert.show();
-                }
+                    @Override
+                    public void onRetry(int retryNo) {
+                        // called when request is retried
+                        Toast.makeText(getApplicationContext(), "Retrying", Toast.LENGTH_LONG).show();
+                    }
+                });
+//                String latlng = gson.toJson(searchResult);
+//                RequestParams params = new RequestParams();
+//                params.put("companyName", companyName);
+//                params.put("latlng", latlng);
+////                if(proccedsubmission(companyName, searchResult)){
+////                    Toast.makeText(getApplicationContext(), "vvyiyi", Toast.LENGTH_LONG).show();
+//                    httpClient.post(connectionDomain, params, new AsyncHttpResponseHandler() {
+//
+//                        @Override
+//                        public void onStart() {
+//                            // called before request is started
+//                            Toast.makeText(getApplicationContext(), "Request Sent1", Toast.LENGTH_LONG).show();
+//                        }
+//                        @Override
+//                        public void onSuccess(int statusCode, Header[] headers, byte[] response) {
+//                            AlertDialog.Builder alertbox = new AlertDialog.Builder(MapsActivity.this);
+//                            alertbox.setTitle("Success");
+//                            alertbox.setMessage("You are free to go");
+//                            alertbox.setCancelable(false);
+//                            alertbox.setPositiveButton("Ok", new DialogInterface.OnClickListener(){
+//
+//                                @Override
+//                                public void onClick(DialogInterface dialog, int which) {
+//
+//                                }
+//                            });
+//                            AlertDialog alert = alertbox.create();
+//                            alert.show();
+//                        }
+//
+//                        @Override
+//                        public void onFailure(int statusCode, Header[] headers, byte[] errorResponse, Throwable e) {
+//                            // called when response HTTP status is "4XX" (eg. 401, 403, 404)
+//                            if(statusCode==400){
+//                                AlertDialog.Builder alertbox = new AlertDialog.Builder(MapsActivity.this);
+//                                alertbox.setTitle("Warning");
+//                                alertbox.setMessage("This company has already been visited by someone previously");
+//                                alertbox.setCancelable(false);
+//                                alertbox.setPositiveButton("Ok", new DialogInterface.OnClickListener(){
+//
+//                                    @Override
+//                                    public void onClick(DialogInterface dialog, int which) {
+//
+//                                    }
+//                                });
+//                                AlertDialog alert = alertbox.create();
+//                                alert.show();
+//                            }
+//                            else{
+//                                Toast.makeText(getApplicationContext(), "Server Down", Toast.LENGTH_LONG).show();
+//                            }
+//                        }
+//
+//                        @Override
+//                        public void onRetry(int retryNo) {
+//                            // called when request is retried
+//                            Toast.makeText(getApplicationContext(), "Retrying", Toast.LENGTH_LONG).show();
+//                        }
+//                    });
+//                }
+//                else{
+//                    AlertDialog.Builder alertbox = new AlertDialog.Builder(MapsActivity.this);
+//                    alertbox.setTitle("Warning2");
+//                    alertbox.setMessage("This company has already been visited by someone previously");
+//                    alertbox.setCancelable(false);
+//                    alertbox.setPositiveButton("Ok", new DialogInterface.OnClickListener(){
+//
+//                        @Override
+//                        public void onClick(DialogInterface dialog, int which) {
+//
+//                        }
+//                    });
+//                    AlertDialog alert = alertbox.create();
+//                    alert.show();
+//                }
             }
             else{
                 AlertDialog.Builder alertbox = new AlertDialog.Builder(MapsActivity.this);
