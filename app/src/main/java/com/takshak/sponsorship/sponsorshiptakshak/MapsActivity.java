@@ -1,7 +1,9 @@
 package com.takshak.sponsorship.sponsorshiptakshak;
 
 import android.Manifest;
+import android.app.Dialog;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Address;
 import android.location.Geocoder;
@@ -18,8 +20,14 @@ import android.support.v4.app.ShareCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.widget.ListPopupWindowCompat;
 import android.support.v7.app.AlertDialog;
+import android.support.v7.widget.PopupMenu;
 import android.view.View;
+import android.widget.Adapter;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ListView;
 import android.widget.Toast;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -39,11 +47,13 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.ButtCap;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
 
+import com.google.gson.internal.bind.ReflectiveTypeAdapterFactory;
 import com.google.gson.JsonArray;
 import com.google.gson.reflect.TypeToken;
 import com.loopj.android.http.*;
@@ -64,7 +74,6 @@ import java.util.ListIterator;
 import java.util.Map;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback,
         GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener,
@@ -136,8 +145,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             buildGoogleApiClient();
             mMap.setMyLocationEnabled(true);
             mMap.setOnMarkerDragListener(this);
-            //TODO MAKE CAMERA MOVE TO CURRENT POSITION ONLOAD
-//            mMap.animateCamera(CameraUpdateFactory.newLatLng(latlng));
         }
     }
 
@@ -153,14 +160,44 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public void searchFunction(View v){
         if(v.getId() == R.id.searchButton){
             EditText tf_location = (EditText)findViewById(R.id.Location);
+            Button b = (Button)findViewById(R.id.searchButton);
             String location = tf_location.getText().toString();
-            List<Address> addressList;
-            MarkerOptions markerOptions = new MarkerOptions();
-//TODO ADD ACTIVITY TO SELECT FROM RETURNED LIST OF ADDRESSES
+            final List<Address> addressList;
+            final MarkerOptions markerOptions = new MarkerOptions();
+
             if(!location.equals("")){
                 Geocoder geocoder = new Geocoder(this);
                 try {
                     addressList = geocoder.getFromLocationName(location, 5);
+                    final Dialog dialog = new Dialog(MapsActivity.this);
+                    dialog.setContentView(R.layout.dialog);
+                   // dialog.setTitle("Select Place");
+                   // String tmp = addressList.toString();
+                   // List<String> listaddress;
+                  //  for (int i=0;i<addressList.size();i++){
+                        //tmp=addressList.toString();
+                        //listaddress.add();
+                   // }
+                    ListView locs =(ListView)dialog.findViewById(R.id.List);
+                    List<String> nEw=null;
+                    nEw.add("hai");
+                    nEw.add("tset");
+                    ArrayAdapter<Address> adapter = new ArrayAdapter<Address>(this,android.R.layout.simple_list_item_1,addressList);
+                    locs.setAdapter(adapter);
+                    locs.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                        @Override
+                        public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                            Address myAddress = addressList.get(position);
+                            LatLng latlng = new LatLng(myAddress.getLatitude(), myAddress.getLongitude());
+                            markerOptions.position(latlng);
+                            markerOptions.title("Entered Location");
+                            mMap.addMarker(markerOptions);
+                            mMap.animateCamera(CameraUpdateFactory.newLatLng(latlng));
+                            this.searchResult = latlng;
+                            dialog.cancel();
+                        }
+                    });
+                    dialog.show();
                     Address myAddress = addressList.get(0);
                     LatLng latlng = new LatLng(myAddress.getLatitude(), myAddress.getLongitude());
                     markerOptions.position(latlng);
@@ -177,7 +214,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         }
     }
-//TODO ADD ACTIVITY TO SHOW ALL LOCATIONS VISITED
+
+    public void details(View view){
+        Intent intent = new Intent(this,Details.class);
+        startActivity(intent);
+    }
+
     public void submitFunction(View v){
         if(v.getId() == R.id.submitButton){
             EditText tf_companyName = (EditText)findViewById(R.id.companyName);
@@ -536,7 +578,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
         }
     }
-
     @Override
     public void onLocationChanged(Location location) {
         lastLocation = location;
@@ -551,11 +592,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         markerOptions.title("You are here");
         markerOptions.draggable(true);
         mMap.clear();
+
         currentLocationMarker = mMap.addMarker(markerOptions);
 
         mMap.moveCamera(CameraUpdateFactory.newLatLng(latlng));
         mMap.animateCamera(CameraUpdateFactory.zoomBy(10));
         this.searchResult = latlng;
+
         if(client != null){
             LocationServices.FusedLocationApi.removeLocationUpdates(client, this);
         }
@@ -595,21 +638,22 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     @Override
     public void onConnectionSuspended(int i) {
-
+        
     }
+    
+        @Override
+        public void onMarkerDragStart(Marker marker) {
+    
+        }
+    
+        @Override
+        public void onMarkerDrag(Marker marker) {
+    
+        }
+    
+        @Override
+        public void onMarkerDragEnd(Marker marker) {
+            this.searchResult = marker.getPosition();
 
-    @Override
-    public void onMarkerDragStart(Marker marker) {
-
-    }
-
-    @Override
-    public void onMarkerDrag(Marker marker) {
-
-    }
-
-    @Override
-    public void onMarkerDragEnd(Marker marker) {
-        this.searchResult = marker.getPosition();
     }
 }
