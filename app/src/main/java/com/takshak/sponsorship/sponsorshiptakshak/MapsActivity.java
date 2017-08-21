@@ -193,6 +193,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                             LatLng latlng = new LatLng(myAddress.getLatitude(), myAddress.getLongitude());
                             markerOptions.position(latlng);
                             markerOptions.title("Entered Location");
+                            mMap.clear();
                             mMap.addMarker(markerOptions);
                             mMap.animateCamera(CameraUpdateFactory.newLatLng(latlng));
                             setSearchResult(latlng);
