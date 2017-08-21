@@ -157,6 +157,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         client.connect();
     }
 
+    private void setSearchResult(LatLng searchResult){
+        this.searchResult = searchResult;
+    }
+
     public void searchFunction(View v){
         if(v.getId() == R.id.searchButton){
             EditText tf_location = (EditText)findViewById(R.id.Location);
@@ -180,8 +184,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                    // }
                     ListView locs =(ListView)dialog.findViewById(R.id.List);
                     List<String> nEw=null;
-                    nEw.add("hai");
-                    nEw.add("tset");
                     ArrayAdapter<Address> adapter = new ArrayAdapter<Address>(this,android.R.layout.simple_list_item_1,addressList);
                     locs.setAdapter(adapter);
                     locs.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -193,7 +195,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                             markerOptions.title("Entered Location");
                             mMap.addMarker(markerOptions);
                             mMap.animateCamera(CameraUpdateFactory.newLatLng(latlng));
-                            this.searchResult = latlng;
+                            setSearchResult(latlng);
                             dialog.cancel();
                         }
                     });
@@ -206,7 +208,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     mMap.clear();
                     mMap.addMarker(markerOptions);
                     mMap.animateCamera(CameraUpdateFactory.newLatLng(latlng));
-                    this.searchResult = latlng;
+                    setSearchResult(latlng);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
