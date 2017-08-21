@@ -1,26 +1,56 @@
 <RelativeLayout android:layout_height="match_parent"
     android:layout_width="match_parent"
+    android:id="@+id/RelMain"
     xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <EditText
-        android:id="@+id/Location"
-        android:layout_width="wrap_content"
+    <TextView
+        android:layout_width="match_parent"
+        android:id="@+id/MainText"
+        android:text="TAKSHAK`17 Sponsorship"
         android:layout_height="wrap_content"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentTop="true"
+        android:textAlignment="center"
         android:ems="10"
-        android:inputType="textPersonName"
-        android:text="Location"
-        android:layout_alignBaseline="@+id/searchButton"
-        android:layout_alignBottom="@+id/searchButton"
-        android:layout_alignParentStart="true" />
-
-    <Button
-        android:id="@+id/searchButton"
-        android:layout_width="wrap_content"
+        android:paddingTop="10dp"
+        android:layout_margin="5dp"/>
+    <EditText
+        android:id="@+id/companyName"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_above="@+id/map"
-        android:layout_alignParentEnd="true"
-        android:onClick="searchFunction"
-        android:text="Search" />
+        android:layout_below="@+id/MainText"
+        android:ems="10"
+        android:paddingTop="10dp"
+        android:layout_margin="5dp"
+        android:inputType="textPersonName"
+        android:hint="Company Name" />
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/LinLay"
+        android:layout_below="@+id/companyName">
+        <EditText
+            android:id="@+id/Location"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:ems="10"
+            android:paddingTop="10dp"
+            android:layout_margin="5dp"
+            android:inputType="textPersonName"
+            android:layout_weight="1"
+            android:hint="Location"
+            />
+
+        <Button
+            android:id="@+id/searchButton"
+            android:layout_width="wrap_content"
+            android:onClick="searchFunction"
+            android:text="Search"
+            android:paddingTop="10dp"
+            android:layout_margin="5dp"
+            android:layout_height="wrap_content"
+            />
+    </LinearLayout>
 
     <fragment xmlns:android="http://schemas.android.com/apk/res/android"
         xmlns:map="http://schemas.android.com/apk/res-auto"
@@ -29,30 +59,34 @@
         android:name="com.google.android.gms.maps.SupportMapFragment"
         android:layout_width="match_parent"
         android:layout_height="350dp"
+        android:layout_below="@+id/LinLay"
         tools:context="com.takshak.sponsorship.sponsorshiptakshak.MapsActivity"
         android:layout_marginBottom="62dp"
         android:layout_alignParentBottom="true"
         android:layout_alignParentStart="true" />
-
-    <Button
-        android:id="@+id/submitButton"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
         android:layout_alignParentEnd="true"
-        android:layout_alignParentStart="true"
-        android:onClick="submitFunction"
-        android:text="Submit" />
+        android:layout_alignParentStart="true">
 
-    <EditText
-        android:id="@+id/companyName"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_above="@+id/Location"
-        android:layout_alignParentEnd="true"
-        android:layout_alignParentStart="true"
-        android:layout_alignParentTop="true"
-        android:text="Company Name" />
+        <Button
+            android:id="@+id/submitButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:onClick="submitFunction"
+            android:text="Submit" />
+        <Button
+            android:id="@+id/detailsButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:onClick="details"
+            android:text="View all" />
+
+    </LinearLayout>
 
     <Button
         android:id="@+id/currentLocationButton"

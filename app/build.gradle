@@ -17,11 +17,12 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
-    packagingOptions {
-        exclude 'META-INF/LICENSE'
-        exclude 'META-INF/NOTICE'
+    packagingOptions{
+        exclude 'META-INF/license.txt'
     }
 }
+
+
 
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
@@ -33,7 +34,7 @@ dependencies {
     compile 'com.google.android.gms:play-services-location:10.2.1'
     compile 'com.loopj.android:android-async-http:1.4.9'
     compile "cz.msebera.android:httpclient:4.4.1.2"
-    compile 'com.google.code.gson:gson:2.6.2'
     compile 'com.fasterxml.jackson.core:jackson-databind:2.7.2'
+    compile 'com.google.code.gson:gson:2.6.2'
     testCompile 'junit:junit:4.12'
 }

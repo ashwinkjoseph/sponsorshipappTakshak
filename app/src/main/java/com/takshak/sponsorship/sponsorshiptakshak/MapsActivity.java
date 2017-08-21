@@ -1,7 +1,9 @@
 package com.takshak.sponsorship.sponsorshiptakshak;
 
 import android.Manifest;
+import android.app.Dialog;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Address;
 import android.location.Geocoder;
@@ -14,20 +16,19 @@ import android.support.annotation.StringDef;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
-import android.support.v4.app.ShareCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.widget.ListPopupWindowCompat;
 import android.support.v7.app.AlertDialog;
+import android.support.v7.widget.PopupMenu;
 import android.view.View;
+import android.widget.Adapter;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ListView;
 import android.widget.Toast;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JavaType;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.deser.impl.FieldProperty;
-import com.fasterxml.jackson.databind.node.JsonNodeType;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationListener;
@@ -39,13 +40,13 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.ButtCap;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
 
-import com.google.gson.JsonArray;
-import com.google.gson.reflect.TypeToken;
+import com.google.gson.internal.bind.ReflectiveTypeAdapterFactory;
 import com.loopj.android.http.*;
 import org.json.JSONObject;
 import cz.msebera.android.httpclient.*;
@@ -53,23 +54,12 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 import java.io.IOException;
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Field;
-import java.lang.reflect.Type;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
-import java.util.ListIterator;
-import java.util.Map;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback,
         GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener,
-        LocationListener,
-        GoogleMap.OnMarkerDragListener {
+        LocationListener {
 
     private GoogleMap mMap;
     private GoogleApiClient client;
@@ -80,7 +70,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private LatLng searchResult;
     private static final String connectionDomain = "http://takshak.herokuapp.com";
     private static AsyncHttpClient httpClient = new AsyncHttpClient();
-    private static boolean flag;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -135,9 +124,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED){
             buildGoogleApiClient();
             mMap.setMyLocationEnabled(true);
-            mMap.setOnMarkerDragListener(this);
-            //TODO MAKE CAMERA MOVE TO CURRENT POSITION ONLOAD
-//            mMap.animateCamera(CameraUpdateFactory.newLatLng(latlng));
         }
     }
 
@@ -153,23 +139,51 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public void searchFunction(View v){
         if(v.getId() == R.id.searchButton){
             EditText tf_location = (EditText)findViewById(R.id.Location);
+            Button b = (Button)findViewById(R.id.searchButton);
             String location = tf_location.getText().toString();
-            List<Address> addressList;
-            MarkerOptions markerOptions = new MarkerOptions();
-//TODO ADD ACTIVITY TO SELECT FROM RETURNED LIST OF ADDRESSES
+            final List<Address> addressList;
+            final MarkerOptions markerOptions = new MarkerOptions();
+
             if(!location.equals("")){
                 Geocoder geocoder = new Geocoder(this);
                 try {
                     addressList = geocoder.getFromLocationName(location, 5);
+                    final Dialog dialog = new Dialog(MapsActivity.this);
+                    dialog.setContentView(R.layout.dialog);
+                   // dialog.setTitle("Select Place");
+                   // String tmp = addressList.toString();
+                   // List<String> listaddress;
+                  //  for (int i=0;i<addressList.size();i++){
+                        //tmp=addressList.toString();
+                        //listaddress.add();
+                   // }
+                    ListView locs =(ListView)dialog.findViewById(R.id.List);
+                    List<String> nEw=null;
+                    nEw.add("hai");
+                    nEw.add("tset");
+                    ArrayAdapter<Address> adapter = new ArrayAdapter<Address>(this,android.R.layout.simple_list_item_1,addressList);
+                    locs.setAdapter(adapter);
+                    locs.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                        @Override
+                        public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                            Address myAddress = addressList.get(position);
+                            LatLng latlng = new LatLng(myAddress.getLatitude(), myAddress.getLongitude());
+                            markerOptions.position(latlng);
+                            markerOptions.title("Entered Location");
+                            mMap.addMarker(markerOptions);
+                            mMap.animateCamera(CameraUpdateFactory.newLatLng(latlng));
+                            searchResult = latlng;
+                            dialog.cancel();
+                        }
+                    });
+                    dialog.show();
                     Address myAddress = addressList.get(0);
                     LatLng latlng = new LatLng(myAddress.getLatitude(), myAddress.getLongitude());
                     markerOptions.position(latlng);
                     markerOptions.title("Entered Location");
-                    markerOptions.draggable(true);
-                    mMap.clear();
                     mMap.addMarker(markerOptions);
                     mMap.animateCamera(CameraUpdateFactory.newLatLng(latlng));
-                    this.searchResult = latlng;
+                    searchResult = latlng;
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -177,89 +191,48 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         }
     }
-//TODO ADD ACTIVITY TO SHOW ALL LOCATIONS VISITED
+
+    public void details(View view){
+        Intent intent = new Intent(this,Details.class);
+        startActivity(intent);
+    }
+
     public void submitFunction(View v){
         if(v.getId() == R.id.submitButton){
             EditText tf_companyName = (EditText)findViewById(R.id.companyName);
             String companyName = tf_companyName.getText().toString();
-//TODO MAKE THIS CALL NON-ASYNCHRONOUS
-            if((!companyName.equals(""))&&(this.searchResult!=null)){
-                final Gson gson = new Gson();
+
+            if((!companyName.equals(""))&&(searchResult!=null)){
+                Gson gson = new Gson();
                 String latlng = gson.toJson(searchResult);
                 RequestParams params = new RequestParams();
                 params.put("companyName", companyName);
                 params.put("latlng", latlng);
-                if(proccedsubmission(companyName, searchResult)){
-//                    Toast.makeText(getApplicationContext(), "vvyiyi", Toast.LENGTH_LONG).show();
-                    httpClient.post(connectionDomain, params, new AsyncHttpResponseHandler() {
+                httpClient.post(connectionDomain, params, new AsyncHttpResponseHandler() {
 
-                        @Override
-                        public void onStart() {
-                            // called before request is started
-                            Toast.makeText(getApplicationContext(), "Request Sent1", Toast.LENGTH_LONG).show();
-                        }
-                        @Override
-                        public void onSuccess(int statusCode, Header[] headers, byte[] response) {
-                            AlertDialog.Builder alertbox = new AlertDialog.Builder(MapsActivity.this);
-                            alertbox.setTitle("Success");
-                            alertbox.setMessage("You are free to go");
-                            alertbox.setCancelable(false);
-                            alertbox.setPositiveButton("Ok", new DialogInterface.OnClickListener(){
+                    @Override
+                    public void onStart() {
+                        // called before request is started
+                        Toast.makeText(getApplicationContext(), "Request Sent", Toast.LENGTH_LONG).show();
+                    }
 
-                                @Override
-                                public void onClick(DialogInterface dialog, int which) {
+                    @Override
+                    public void onSuccess(int statusCode, Header[] headers, byte[] response) {
+                        Toast.makeText(getApplicationContext(), "Data Sent", Toast.LENGTH_LONG).show();
+                    }
 
-                                }
-                            });
-                            AlertDialog alert = alertbox.create();
-                            alert.show();
-                        }
+                    @Override
+                    public void onFailure(int statusCode, Header[] headers, byte[] errorResponse, Throwable e) {
+                        // called when response HTTP status is "4XX" (eg. 401, 403, 404)
+                        Toast.makeText(getApplicationContext(), "Server Down", Toast.LENGTH_LONG).show();
+                    }
 
-                        @Override
-                        public void onFailure(int statusCode, Header[] headers, byte[] errorResponse, Throwable e) {
-                            // called when response HTTP status is "4XX" (eg. 401, 403, 404)
-                            if(statusCode==400){
-                                AlertDialog.Builder alertbox = new AlertDialog.Builder(MapsActivity.this);
-                                alertbox.setTitle("Warning");
-                                alertbox.setMessage("This company has already been visited by someone previously");
-                                alertbox.setCancelable(false);
-                                alertbox.setPositiveButton("Ok", new DialogInterface.OnClickListener(){
-
-                                    @Override
-                                    public void onClick(DialogInterface dialog, int which) {
-
-                                    }
-                                });
-                                AlertDialog alert = alertbox.create();
-                                alert.show();
-                            }
-                            else{
-                                Toast.makeText(getApplicationContext(), "Server Down", Toast.LENGTH_LONG).show();
-                            }
-                        }
-
-                        @Override
-                        public void onRetry(int retryNo) {
-                            // called when request is retried
-                            Toast.makeText(getApplicationContext(), "Retrying", Toast.LENGTH_LONG).show();
-                        }
-                    });
-                }
-                else{
-                    AlertDialog.Builder alertbox = new AlertDialog.Builder(MapsActivity.this);
-                    alertbox.setTitle("Warning2");
-                    alertbox.setMessage("This company has already been visited by someone previously");
-                    alertbox.setCancelable(false);
-                    alertbox.setPositiveButton("Ok", new DialogInterface.OnClickListener(){
-
-                        @Override
-                        public void onClick(DialogInterface dialog, int which) {
-
-                        }
-                    });
-                    AlertDialog alert = alertbox.create();
-                    alert.show();
-                }
+                    @Override
+                    public void onRetry(int retryNo) {
+                        // called when request is retried
+                        Toast.makeText(getApplicationContext(), "Retrying", Toast.LENGTH_LONG).show();
+                    }
+                });
             }
             else{
                 AlertDialog.Builder alertbox = new AlertDialog.Builder(MapsActivity.this);
@@ -279,117 +252,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
-    public void setboolean(boolean bool){
-        this.flag = bool;
-    }
-
-    private boolean proccedsubmission(String companyName, LatLng searchResult) {
-        RequestParams params = new RequestParams();
-        boolean flag;
-        final Gson gson = new Gson();
-
-        httpClient.get("http://takshak.herokuapp.com/addChecker/"+companyName, params, new AsyncHttpResponseHandler() {
-
-            @Override
-            public void onStart() {
-                // called before request is started
-                Toast.makeText(getApplicationContext(), "Request Sent2", Toast.LENGTH_LONG).show();
-            }
-
-            @Override
-            public void onSuccess(int statusCode, Header[] headers, byte[] response) {
-                ObjectMapper mapper = new ObjectMapper();
-                ArrayList<Parser> objects = null;
-                //TODO CHECK IF ANY RETURNED OBJECT IS IN THE VINCITY OF CURRENT LOCATION
-                try {
-                    String resp = new String(response);
-                    JavaType type = mapper.getTypeFactory().constructCollectionType(ArrayList.class, Parser.class);
-                    objects = mapper.readValue(resp, type);
-                    Iterator<Parser> objectsIterator = objects.iterator();
-                    boolean flag = true;
-                    while(objectsIterator.hasNext()){
-                        Parser newobj = objectsIterator.next();
-//                        LatLng latlng = new LatLng(newobj.getlatlng().getlatitude(), )
-                        flag = false;
-                        break;
-                    }
-                    setboolean(flag);
-                    Toast.makeText(getApplicationContext(), "here", Toast.LENGTH_LONG).show();
-                } catch (IOException e) {
-                    AlertDialog.Builder alertbox2 = new AlertDialog.Builder(MapsActivity.this);
-                    alertbox2.setTitle("error");
-                    alertbox2.setMessage(e.toString());
-                    alertbox2.setCancelable(false);
-                    alertbox2.setPositiveButton("Ok", new DialogInterface.OnClickListener(){
-
-                        @Override
-                        public void onClick(DialogInterface dialog, int which) {
-
-                        }
-                    });
-                    AlertDialog alert2 = alertbox2.create();
-                    alert2.show();
-                    setboolean(false);
-                }
-            }
-
-            @Override
-            public void onFailure(int statusCode, Header[] headers, byte[] errorResponse, Throwable e) {
-                // called when response HTTP status is "4XX" (eg. 401, 403, 404)
-                if(statusCode==400){
-                    AlertDialog.Builder alertbox = new AlertDialog.Builder(MapsActivity.this);
-                    alertbox.setTitle("Warning");
-                    alertbox.setMessage("fail");
-                    alertbox.setCancelable(false);
-                    alertbox.setPositiveButton("Ok", new DialogInterface.OnClickListener(){
-
-                        @Override
-                        public void onClick(DialogInterface dialog, int which) {
-
-                        }
-                    });
-                    AlertDialog alert = alertbox.create();
-                    alert.show();
-                }
-                else{
-                    Toast.makeText(getApplicationContext(), "Server Downgyguy", Toast.LENGTH_LONG).show();
-                }
-                setboolean(false);
-            }
-
-            @Override
-            public void onRetry(int retryNo) {
-                // called when request is retried
-                Toast.makeText(getApplicationContext(), "Retrying", Toast.LENGTH_LONG).show();
-            }
-        });
-        Toast.makeText(getApplicationContext(), "exiting2", Toast.LENGTH_LONG).show();
-        return this.flag;
-    }
-
-    public void currentLocationFunction(View v){
-        if(v.getId() == R.id.currentLocationButton){
-            if (checkLocationPermission()) {
-                lastLocation = LocationServices.FusedLocationApi
-                        .getLastLocation(client);
-            }
-
-            // Set the map's camera position to the current location of the device.
-            if (lastLocation != null) {
-                LatLng latLng = new LatLng(lastLocation.getLatitude(), lastLocation.getLongitude());
-                MarkerOptions markerOptions = new MarkerOptions();
-                markerOptions.position(latLng);
-                markerOptions.title("You are here");
-                markerOptions.draggable(true);
-                mMap.clear();
-                mMap.addMarker(markerOptions);
-                mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
-                mMap.animateCamera(CameraUpdateFactory.zoomBy(10));
-                searchResult = latLng;
-            }
-        }
-    }
-
     @Override
     public void onLocationChanged(Location location) {
         lastLocation = location;
@@ -402,13 +264,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         MarkerOptions markerOptions = new MarkerOptions();
         markerOptions.position(latlng);
         markerOptions.title("You are here");
-        markerOptions.draggable(true);
-        mMap.clear();
+        markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE));
+
         currentLocationMarker = mMap.addMarker(markerOptions);
 
         mMap.moveCamera(CameraUpdateFactory.newLatLng(latlng));
         mMap.animateCamera(CameraUpdateFactory.zoomBy(10));
-        this.searchResult = latlng;
+
         if(client != null){
             LocationServices.FusedLocationApi.removeLocationUpdates(client, this);
         }
@@ -449,20 +311,5 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onConnectionSuspended(int i) {
 
-    }
-
-    @Override
-    public void onMarkerDragStart(Marker marker) {
-
-    }
-
-    @Override
-    public void onMarkerDrag(Marker marker) {
-
-    }
-
-    @Override
-    public void onMarkerDragEnd(Marker marker) {
-        this.searchResult = marker.getPosition();
     }
 }
